@@ -7,15 +7,16 @@ I wanted to start fast. But suddenly I realized there is nothing Py3k
 compatible I would like to use. Not even WebOb :(
 '''
 
-from pyhaa import PyhaaEnvironment, html_render_to_iterator
-from pyhaa.runtime.loaders import FilesystemLoader
-from pyhaa.runtime.cache import FilesystemBytecodeCache
-
+import datetime
 import functools
 import os.path
 import re
 import sys
 import threading
+
+from pyhaa import PyhaaEnvironment, html_render_to_iterator
+from pyhaa.runtime.cache import FilesystemBytecodeCache
+from pyhaa.runtime.loaders import FilesystemLoader
 
 
 class TemplateContext:
@@ -119,7 +120,10 @@ class TestApplication:
 
     def __call__(self, environ, start_response):
         c._context_reset()
-        result = self.routing.resolve(environ['PATH_INFO'])
+        path = environ['PATH_INFO']
+        if path.startswith('/'):
+            path = path[1:]
+        result = self.routing.resolve(path)
         if result:
             result, args = result
             iterator = result(**args)
@@ -139,9 +143,14 @@ class TestApplication:
 def page_main():
     pass
 
+@expose('subpage.pha')
+def page_subpage():
+    c.time = datetime.datetime.now().isoformat()
+
 application = TestApplication(
     RegexRouting((
         ('/?$', page_main),
+        ('subpage/?$', page_subpage),
     )),
 )
 

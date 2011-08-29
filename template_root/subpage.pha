@@ -1,0 +1,13 @@
+`inherit 'common/base.pha'
+
+`def title():
+  - return 'What is the current time?'
+
+`def body():
+  %h1 So this is a subpage
+  %p
+    Would you like to know what time it is now? It's
+    !sp
+    %strong
+      = c.time
+

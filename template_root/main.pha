@@ -5,4 +5,5 @@
   %p
     Have a look at
     !sp
-    %a(href='/subpage') subpage!
+    %a(href='/subpage') subpage
+    !

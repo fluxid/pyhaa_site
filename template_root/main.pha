@@ -1,0 +1,8 @@
+`inherit 'common/base.pha'
+
+`def body():
+  %h1 This is pyhaa test page
+  %p
+    Have a look at
+    !sp
+    %a(href='/subpage') subpage!

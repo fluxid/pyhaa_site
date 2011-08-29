@@ -1,0 +1,16 @@
+`def title():
+  - return None
+
+`def body()
+
+!html5
+%html
+  %head
+    %title
+      - title = self.title()
+      - if title:
+        = title
+        = ' - '
+      Pyhaa Test Site
+  %body
+    = self.body()

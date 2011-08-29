@@ -20,16 +20,16 @@ import threading
 
 class TemplateContext:
     def __init__(self):
-        super(TemplateContext, self).__setattr__('_context_storage ', threading.local())
+        super(TemplateContext, self).__setattr__('_context_storage', threading.local())
 
     def _context_dict(self):
         dict_ = getattr(self._context_storage, 'template_dict', None)
-        if dict_ is none:
+        if dict_ is None:
             dict_ = self._context_storage.template_dict = dict()
         return dict_
 
     def _context_reset(self):
-        self._context_storage().clear()
+        self._context_dict().clear()
 
     def __getattr__(self, name):
         return self._context_dict().get(name, '')
@@ -77,7 +77,7 @@ class RegexRouting:
                 if g:
                     args.update(g.groupdict())
                     start = g.end()
-                    if callable(target):
+                    if hasattr(target, '__call__'):
                         return target, args
                     else:
                         found = target
@@ -123,14 +123,14 @@ class TestApplication:
         if result:
             result, args = result
             iterator = result(**args)
-            start_response('200 OK', (
+            start_response('200 OK', [
                 ('Content-type', 'text/html; charset=utf8'),
-            ))
+            ])
             return iterator
 
-        start_response('404 Not Found', (
+        start_response('404 Not Found', [
             ('Content-type', 'text/html; charset=utf8'),
-        ))
+        ])
         return 'Not found :('
 
 # Pages!

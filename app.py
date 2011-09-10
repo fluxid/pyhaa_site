@@ -7,10 +7,13 @@ I wanted to start fast. But suddenly I realized there is nothing Py3k
 compatible I would like to use. Not even WebOb :(
 '''
 
+from cgi import FieldStorage
 import datetime
 import functools
+import io
 import os.path
 import re
+import socket
 import sys
 import threading
 
@@ -40,6 +43,9 @@ class TemplateContext:
 
     def __delattr__(self, name):
         return self._context_dict().pop(name, None)
+
+def get_input(environ):
+    return io.TextIOWrapper(io.BufferedReader(io.FileIO(environ['wsgi.input'].fileno(), 'r', False)), encoding='utf8')
 
 # Routing stuff ported from my old'n'stupid fpyf
 
@@ -107,8 +113,8 @@ environment = PyhaaEnvironment(
 
 def expose(template_path):
     def decorator(f):
-        def wrapper(**kwargs):
-            f(**kwargs)
+        def wrapper(environ, **kwargs):
+            f(environ, **kwargs)
             template = environment.get_template(template_path)
             return html_render_to_iterator(template)
         return functools.update_wrapper(wrapper, f)
@@ -126,7 +132,7 @@ class TestApplication:
         result = self.routing.resolve(path)
         if result:
             result, args = result
-            iterator = result(**args)
+            iterator = result(environ, **args)
             start_response('200 OK', [
                 ('Content-type', 'text/html; charset=utf8'),
             ])
@@ -140,17 +146,63 @@ class TestApplication:
 # Pages!
 
 @expose('main.pha')
-def page_main():
+def page_main(environ):
     pass
 
 @expose('subpage.pha')
-def page_subpage():
+def page_subpage(environ):
     c.time = datetime.datetime.now().isoformat()
+
+@expose('exec_shit.pha')
+def page_exec_shit(environ):
+    if environ['REQUEST_METHOD'] == 'POST':
+        fields = FieldStorage(
+            fp = environ['wsgi.input'],
+            environ = environ,
+        )
+        code = fields.getfirst('code')
+        if code:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.settimeout(8.0)
+            sock.connect('/home/fluxid/main/dev/sandboxed/socket')
+            code = code.replace('\r\n', '\n')
+            sock.sendall(code.encode('utf8') + b'\0')
+
+            c.code = code
+            print('===')
+            print(code)
+            print('===')
+
+            def _gen_receive():
+                try:
+                    continue_recv = True
+                    while continue_recv:
+                        try:
+                            data = sock.recv(4096)
+                        except socket.timeout:
+                            yield '\n\nExecution timed out'
+                            return
+                        if not data:
+                            return
+                        zeropos = data.find(b'\0')
+                        if zeropos > -1:
+                            data = data[:zeropos]
+                            continue_recv = False
+                        if not data:
+                            return
+                        # Let's say it won't stop in the middle
+                        # octet stream ;)
+                        yield data.decode('utf8', 'ignore')
+                finally:
+                    sock.close()
+
+            c.result = _gen_receive()
 
 application = TestApplication(
     RegexRouting((
         ('/?$', page_main),
         ('subpage/?$', page_subpage),
+        ('exec_shit/?$', page_exec_shit),
     )),
 )
 

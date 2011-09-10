@@ -1,0 +1,15 @@
+`inherit 'common/base.pha'
+
+`def title():
+  - return 'Pyhaa evaluator!'
+
+`def body():
+  %h1 Play with Pyhaa!
+  %form(method=post)
+    %textarea(name=code rows=20 cols=80)
+      = c.code
+    %input(type=submit value="Execute!")
+  %pre
+    = c.result
+  
+
